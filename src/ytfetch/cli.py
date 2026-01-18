@@ -3,7 +3,6 @@ import sys
 import yt_dlp # type: ignore
 from colorama import Fore, Style # type: ignore
 import subprocess
-from itertools import zip_longest
 from .utils import (
     validate_fetch_ranges,
     ErrorOnlyLogger,
@@ -159,18 +158,23 @@ def process_urls(custom_args, raw_ytdlp_args):
                         "--playlist-items", fetch_range
                     ])
             else:
-                command.extend(
-                    ["--playlist-items", fetch_ranges[0]]
-                )
+                command = [
+                    "yt-dlp",
+                     "--flat-playlist",
+                    "--print", "%(playlist_index)s - %(title)s",
+                    "--playlist-items", fetch_ranges[0]
+                ]
         # make sure command is a list of list
-        final_cmd.extend(command)
-        # print(final_cmd)
+        if isinstance(command[0], str):
+            command = [command] * len(urls)
+
+        print(command)
 
         if custom_args.list != 'default':
             search_mode = True
             list_val = str(custom_args.list)
             search_pattern = list_val.lower()
-        for url, cmd in zip_longest(urls, final_cmd, fillvalue=final_cmd):
+        for url, cmd in zip(urls, command):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:  #type: ignore
                 try:
                     info = ydl.extract_info(url, download=False) # type: ignore
@@ -183,7 +187,7 @@ def process_urls(custom_args, raw_ytdlp_args):
                     print(f"Error getting {url} title: {e}")
             try:
                 cmd.extend([url]) # type: ignore
-                # print(cmd)
+                print(cmd)
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 for line in result.stdout.splitlines():
                     idx, title = line.split(" - ", 1)
