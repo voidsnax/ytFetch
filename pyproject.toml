@@ -7,14 +7,20 @@ name = "ytfetch"
 version = "1.0.0"
 description = "A wrapper for yt-dlp with custom simple fetching flags"
 authors = [
-    { name = "voidsnax", email = "you@example.com" }
+    { name = "voidsnax" }
 ]
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.8"
 dependencies = [
-    "yt-dlp>=2023.3.4",
+    "yt-dlp>=2025.12.08",
+    "colorama"
 ]
+
+keywords = ["youtubedownloader"", "converter", "h264", "mp3"]
+
+[project.urls]
+Homepage = "https://github.com/voidsnax/reVidx"
 
 [project.scripts]
 ytfetch = "ytfetch.cli:main"

@@ -2,6 +2,13 @@ import argparse
 import sys
 import yt_dlp # type: ignore
 from colorama import Fore, Style # type: ignore
+import subprocess
+from itertools import zip_longest
+from .utils import (
+    validate_fetch_ranges,
+    ErrorOnlyLogger,
+    AlignedHelpFormatter
+    )
 
 # --- Custom Logger ---
 class YTFetchLogger:
@@ -29,12 +36,6 @@ class YTFetchLogger:
     def error(self, msg):
         print(f"{msg}")
 
-class ErrorOnlyLogger:
-    def debug(self, msg): pass
-    def info(self, msg): pass
-    def warning(self, msg): pass
-    def error(self, msg): print(msg)
-
 
 # --- Custom Progress Hook ---
 def progress_hook(d):
@@ -51,26 +52,26 @@ def progress_hook(d):
 # --- Argument Parsing ---
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        usage = "Usage: ytfetch [OPTIONS] URL... [yt-dlp OPTIONS]",
+        usage = "Usage: ytfetch [OPTIONS] URL ... [yt-dlp OPTIONS]",
         description="ytfetch: yt-dlp wrapper with flexible args and custom output.",
         epilog = "type yt-dlp -h for yt-dlp options \n"
         "Avoid mixing up options",
-        formatter_class=argparse.RawTextHelpFormatter
+        formatter_class=AlignedHelpFormatter
     )
     parser.add_argument("-avcmp3", action="store_true",
                         help="Download video in AVC (h.264) format (mp4) + extract audio")
-    parser.add_argument("-q", default="1080",
+    parser.add_argument("-q", metavar="QUALITY",default="1080",
                         help="Video quality (e.g., 1080, 720). Default is 1080.")
     parser.add_argument("-mp3", action="store_true",
                         help="Extract audio only as MP3")
     parser.add_argument("-audio", action="store_true",
                         help="Extract audio only (bestaudio)")
-    parser.add_argument("-fetch", nargs="+",
+    parser.add_argument("-fetch", metavar="RANGE",nargs="+",
                         help="Alternate for --playlist-items. Single arg applies globally.\n"
                         "Multiple args must match number of playlist URLs provided.")
-    parser.add_argument("-list", nargs="?",const="default",
+    parser.add_argument("-list", metavar="NAME",nargs="?",const="default",
                         help="List playlist contents. Accepts values for searching across playlist")
-    parser.add_argument("-o", metavar=f"PATH/{"%""(template)s"}",
+    parser.add_argument("-o", metavar="PATH/%(template)s",
                         help="List playlist contents (flat list with playlist name at top)")
 
     args, unknown_args = parser.parse_known_args()
@@ -80,9 +81,7 @@ def get_urls_from_args(args_list):
     return [a for a in args_list if a.startswith("http")]
 
 def get_format_selector(args):
-    height = args.q
-    if not args.q == "1080":
-        height = args.q.rstrip("p")
+    height = args.q.rstrip("p")
 
     if args.mp3 or args.audio:
         return "bestaudio"
@@ -135,44 +134,74 @@ def process_urls(custom_args, raw_ytdlp_args):
 
     # --- Mode: List ---
     if custom_args.list:
+        command = [
+            "yt-dlp",
+            "--flat-playlist",
+            "--print", "%(playlist_index)s - %(title)s"
+        ]
+        final_cmd = []
+
         ydl_opts['extract_flat'] = 'in_playlist'
         ydl_opts['logger'] = ErrorOnlyLogger()
 
         search_mode = False
 
-        # print(custom_args.list)
-        if custom_args.list != 'default':
-            list_val = str(custom_args.list)
-            search_mode = True
-            search_pattern = list_val.lower()
+        fetch_ranges = custom_args.fetch
+        if fetch_ranges:
+            if len(fetch_ranges) >1:
+                validate_fetch_ranges(fetch_ranges,urls)
+                command = []
+                for fetch_range in fetch_ranges:
+                    command.append([
+                        "yt-dlp",
+                        "--flat-playlist",
+                        "--print", "%(playlist_index)s - %(title)s",
+                        "--playlist-items", fetch_range
+                    ])
+            else:
+                command.extend(
+                    ["--playlist-items", fetch_ranges[0]]
+                )
+        # make sure command is a list of list
+        final_cmd.extend(command)
+        # print(final_cmd)
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:  #type: ignore
-            for url in urls:
+        if custom_args.list != 'default':
+            search_mode = True
+            list_val = str(custom_args.list)
+            search_pattern = list_val.lower()
+        for url, cmd in zip_longest(urls, final_cmd, fillvalue=final_cmd):
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:  #type: ignore
                 try:
-                    info = ydl.extract_info(url, download=False)
+                    info = ydl.extract_info(url, download=False) # type: ignore
                     if 'entries' not in info:
                         print(f"Single Video: {info.get('title')}")
-                        continue
-                    print(f"{Fore.CYAN}>{Style.RESET_ALL} Playlist: {Fore.CYAN}{info.get('title')}{Style.RESET_ALL}")
-                    print(f"{" -" * 20}")
-                    found_match = False
-                    for i, entry in enumerate(info['entries'], start=1): #type: ignore
-                        # Try to get the actual playlist_index, fallback to enumeration index
-                        idx = entry.get('playlist_index', i)
-                        title = entry.get('title', 'Unknown')
-
-                        video = f"{Fore.CYAN}{idx:>4}{Style.RESET_ALL} - {title}"
-
-                        if not search_mode:
-                            print(video)
-                        else:
-                            if search_pattern in title.lower():
-                                found_match = True
-                                print(video)
-                    if not found_match and search_mode:
-                        print(f"No match found for {Fore.YELLOW}{search_pattern}{Style.RESET_ALL}")
+                    else:
+                        print(f"{Fore.CYAN}>{Style.RESET_ALL} Playlist: {Fore.CYAN}{info.get('title')}{Style.RESET_ALL}")
+                        print(f"{" -" * 20}")
                 except Exception as e:
-                    print(f"Error listing {url}: {e}")
+                    print(f"Error getting {url} title: {e}")
+            try:
+                cmd.extend([url]) # type: ignore
+                # print(cmd)
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                for line in result.stdout.splitlines():
+                    idx, title = line.split(" - ", 1)
+                    video = f"{Fore.YELLOW}{idx}{Style.RESET_ALL} - {title}"
+
+                    found_match = False
+                    if search_mode:
+                        if search_pattern in line.lower():
+                            found_match = True
+                            print(video)
+                    else:
+                        print(video)
+                if not found_match and search_mode:
+                    print(f"No match found for {Fore.YELLOW}{search_pattern}{Style.RESET_ALL}")
+            except Exception as e:
+                print(f"Error listing {url}: {e}")
+
+        # stops further execution
         return
 
     # --- Mode: Download ---
@@ -193,9 +222,7 @@ def process_urls(custom_args, raw_ytdlp_args):
             for url in urls:
                 run_download(url, fetch_ranges[0])
         else:
-            if len(fetch_ranges) != len(urls):
-                print(f"Error: Provided {len(fetch_ranges)} fetch ranges for {len(urls)} URLs.")
-                sys.exit(1)
+            validate_fetch_ranges(fetch_ranges,urls)
             for url, rng in zip(urls, fetch_ranges):
                 run_download(url, rng)
     else:
