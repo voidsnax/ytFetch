@@ -1,3 +1,4 @@
 .vscode/
 ytfetch-env/
 __pycache__/
+dist/
