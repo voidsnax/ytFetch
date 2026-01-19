@@ -150,8 +150,9 @@ def process_urls(custom_args, raw_ytdlp_args):
 
         fetch_ranges = custom_args.fetch
         if fetch_ranges:
-            if fetch_ranges[0] in urls:
+            if any(phrase in fetch_ranges for phrase in urls):
                 print(f"{Fore.RED}Provided URL link as argument for -fetch\nUse -fetch after URL{Style.RESET_ALL}")
+                sys.exit(1)
             if len(fetch_ranges) >1:
                 validate_fetch_ranges(fetch_ranges,urls)
                 for fetch_range in fetch_ranges:
@@ -187,10 +188,10 @@ def process_urls(custom_args, raw_ytdlp_args):
                 cmd.append(url)
                 # print(cmd)
                 result = subprocess.run(cmd, capture_output=True, text=True)
+                found_match = False
                 for line in result.stdout.splitlines():
                     idx, title = line.split(" - ", 1)
                     video = f"{Fore.YELLOW}{idx}{Style.RESET_ALL} - {title}"
-                    found_match = False
                     if search_mode:
                         if search_pattern in line.lower():
                             found_match = True
