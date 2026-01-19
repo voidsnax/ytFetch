@@ -133,12 +133,15 @@ def process_urls(custom_args, raw_ytdlp_args):
 
     # --- Mode: List ---
     if custom_args.list:
-        command = [
+        if custom_args.list in urls:
+            print(f"{Fore.RED}Provided URL link as argument for -list\nUse -list after URL{Style.RESET_ALL}")
+            sys.exit(1)
+        base_cmd = [
             "yt-dlp",
             "--flat-playlist",
             "--print", "%(playlist_index)s - %(title)s"
         ]
-        final_cmd = []
+        command = []
 
         ydl_opts['extract_flat'] = 'in_playlist'
         ydl_opts['logger'] = ErrorOnlyLogger()
@@ -147,52 +150,46 @@ def process_urls(custom_args, raw_ytdlp_args):
 
         fetch_ranges = custom_args.fetch
         if fetch_ranges:
+            if fetch_ranges[0] in urls:
+                print(f"{Fore.RED}Provided URL link as argument for -fetch\nUse -fetch after URL{Style.RESET_ALL}")
             if len(fetch_ranges) >1:
                 validate_fetch_ranges(fetch_ranges,urls)
-                command = []
                 for fetch_range in fetch_ranges:
-                    command.append([
-                        "yt-dlp",
-                        "--flat-playlist",
-                        "--print", "%(playlist_index)s - %(title)s",
-                        "--playlist-items", fetch_range
-                    ])
+                    command.append(base_cmd + [ "--playlist-items", fetch_range])
             else:
-                command = [
-                    "yt-dlp",
-                     "--flat-playlist",
-                    "--print", "%(playlist_index)s - %(title)s",
-                    "--playlist-items", fetch_ranges[0]
-                ]
-        # make sure command is a list of list
-        if isinstance(command[0], str):
-            command = [command] * len(urls)
+                command.append(base_cmd + ["--playlist-items", fetch_ranges[0]])
+        else:
+            command.append(base_cmd)
 
-        print(command)
+        # make sure command is a list of list
+        if len(command) == 1 and len(urls) > 1:
+            command = [cmd.copy() for cmd in [command[0]] * len(urls)]
+
+        # print(command)
 
         if custom_args.list != 'default':
             search_mode = True
             list_val = str(custom_args.list)
             search_pattern = list_val.lower()
         for url, cmd in zip(urls, command):
+            # currently for title fetching this is more reliable
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:  #type: ignore
                 try:
                     info = ydl.extract_info(url, download=False) # type: ignore
                     if 'entries' not in info:
                         print(f"Single Video: {info.get('title')}")
                     else:
-                        print(f"{Fore.CYAN}>{Style.RESET_ALL} Playlist: {Fore.CYAN}{info.get('title')}{Style.RESET_ALL}")
+                        print(f"{Fore.RED}>{Style.RESET_ALL} Playlist: {Fore.CYAN}{info.get('title')}{Style.RESET_ALL}")
                         print(f"{" -" * 20}")
                 except Exception as e:
                     print(f"Error getting {url} title: {e}")
             try:
-                cmd.extend([url]) # type: ignore
-                print(cmd)
+                cmd.append(url)
+                # print(cmd)
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 for line in result.stdout.splitlines():
                     idx, title = line.split(" - ", 1)
                     video = f"{Fore.YELLOW}{idx}{Style.RESET_ALL} - {title}"
-
                     found_match = False
                     if search_mode:
                         if search_pattern in line.lower():
