@@ -6,7 +6,8 @@ import subprocess
 from .utils import (
     validate_fetch_ranges,
     ErrorOnlyLogger,
-    AlignedHelpFormatter
+    AlignedHelpFormatter,
+    print_error
     )
 
 # --- Custom Logger ---
@@ -112,7 +113,7 @@ def get_post_processors(args):
 def process_urls(custom_args, raw_ytdlp_args):
     urls = get_urls_from_args(raw_ytdlp_args)
     if not urls and not custom_args.list:
-        print("Error: No URLs provided.")
+        print_error(f"Error: No URLs provided.")
         sys.exit(1)
 
     ydl_opts = {
@@ -133,8 +134,8 @@ def process_urls(custom_args, raw_ytdlp_args):
 
     # --- Mode: List ---
     if custom_args.list:
-        if custom_args.list in urls:
-            print(f"{Fore.RED}Provided URL link as argument for -list\nUse -list after URL{Style.RESET_ALL}")
+        if custom_args.list.startswith('http'):
+            print_error(f"Provided URL link as argument for -list\nUse -list after URL")
             sys.exit(1)
         base_cmd = [
             "yt-dlp",
@@ -151,7 +152,7 @@ def process_urls(custom_args, raw_ytdlp_args):
         fetch_ranges = custom_args.fetch
         if fetch_ranges:
             if any(phrase in fetch_ranges for phrase in urls):
-                print(f"{Fore.RED}Provided URL link as argument for -fetch\nUse -fetch after URL{Style.RESET_ALL}")
+                print_error(f"Provided URL link as argument for -fetch\nUse -fetch after URL")
                 sys.exit(1)
             if len(fetch_ranges) >1:
                 validate_fetch_ranges(fetch_ranges,urls)
@@ -201,7 +202,7 @@ def process_urls(custom_args, raw_ytdlp_args):
                 if not found_match and search_mode:
                     print(f"No match found for {Fore.YELLOW}{search_pattern}{Style.RESET_ALL}")
             except Exception as e:
-                print(f"Error listing {url}: {e}")
+                print_error(f"Error listing {url}: {e}")
 
         # stops further execution
         return
