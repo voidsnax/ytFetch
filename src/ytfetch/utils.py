@@ -25,8 +25,7 @@ def print_error(msg):
 
 def parse_passthrough_args(args_list):
     """
-    Parses unknown arguments (e.g., --proxy, --no-playlist, -f)
-    into a dictionary compatible with yt-dlp options.
+    Parses unknown arguments (yt-dlp args) into a dictionary.
     """
     opts = {}
     i = 0
@@ -70,7 +69,7 @@ def parse_passthrough_args(args_list):
             # Handle -k=value
             if "=" in arg:
                 key, val = arg[1:].split("=", 1)
-                opts[key] = val
+                opts[normalize_key(key)] = val
                 i += 1
                 continue
 
@@ -79,17 +78,33 @@ def parse_passthrough_args(args_list):
             # Handle -k value
             if i + 1 < len(args_list) and not args_list[i+1].startswith("-"):
                 if not args_list[i+1].startswith("http"):
-                    opts[key] = args_list[i+1]
+                    opts[normalize_key(key)] = args_list[i+1]
                     i += 2
                     continue
 
             # Otherwise boolean short flag
-            opts[key] = True
+            opts[normalize_key(key)] = True
             i += 1
             continue
 
         else:
-            # Not a flag, skip (likely a URL or positional arg)
+            # Not a flag, skip
             i += 1
 
     return opts
+
+SHORT_FLAG_MAP = {
+    "o": "outtmpl",
+    "I": "playlist_items",
+    "f": "format",              # format selector
+    "s": "simulate",            # simulate (no download)
+    "g": "geturl",              # print direct URL
+    "j": "dumpjson",            # dump JSON info
+    "J": "dump_single_json",    # dump JSON for playlist
+    "F": "listformats",         # list available formats
+    'r': 'limitrate',           # Maximum download rate in bytes per second
+    'a': 'auto_number'          # automatically number each downloaded video
+}
+
+def normalize_key(key):
+    return SHORT_FLAG_MAP.get(key, key)

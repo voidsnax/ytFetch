@@ -7,7 +7,8 @@ from .utils import (
     validate_fetch_ranges,
     ErrorOnlyLogger,
     AlignedHelpFormatter,
-    print_error
+    print_error,
+    parse_passthrough_args
     )
 
 # --- Custom Logger ---
@@ -71,8 +72,6 @@ def parse_arguments():
                         "Multiple args must match number of playlist URLs provided.")
     parser.add_argument("-list", metavar="NAME",nargs="?",const="default",
                         help="List playlist contents. Accepts values for searching across playlist")
-    parser.add_argument("-o", metavar="PATH/%(template)s",
-                        help="List playlist contents (flat list with playlist name at top)")
 
     args, unknown_args = parser.parse_known_args()
     return args, unknown_args
@@ -116,14 +115,15 @@ def process_urls(custom_args, raw_ytdlp_args):
         print_error(f"Error: No URLs provided.")
         sys.exit(1)
 
+    passthrough_opts = parse_passthrough_args(raw_ytdlp_args)
+
     ydl_opts = {
         'outtmpl': '%(title)s.%(ext)s',
         'logger': YTFetchLogger(),
         'progress_hooks': [progress_hook],
     }
 
-    if custom_args.o:
-        ydl_opts['outtmpl'] = custom_args.o
+    ydl_opts.update(passthrough_opts)
 
     if custom_args.avcmp3 and not (custom_args.mp3 or custom_args.audio):
         ydl_opts['merge_output_format'] = 'mp4'
@@ -142,6 +142,9 @@ def process_urls(custom_args, raw_ytdlp_args):
             "--flat-playlist",
             "--print", "%(playlist_index)s - %(title)s"
         ]
+
+        passthrough_args = [arg for arg in raw_ytdlp_args if arg not in urls]
+        base_cmd.extend(passthrough_args)
         command = []
 
         ydl_opts['extract_flat'] = 'in_playlist'
@@ -181,8 +184,9 @@ def process_urls(custom_args, raw_ytdlp_args):
                     if 'entries' not in info:
                         print(f"Single Video: {info.get('title')}")
                     else:
-                        print(f"{Fore.RED}>{Style.RESET_ALL} Playlist: {Fore.CYAN}{info.get('title')}{Style.RESET_ALL}")
-                        print(f"{" -" * 20}")
+                        title = f"▶ Playlist: {info.get('title')}"
+                        print(f"▶ Playlist: {Fore.CYAN}{info.get('title')}{Style.RESET_ALL}")
+                        print(f"{"-" * len(title)}")
                 except Exception as e:
                     print(f"Error getting {url} title: {e}")
             try:
@@ -237,7 +241,7 @@ def main():
         custom_args, ytdlp_args = parse_arguments()
         process_urls(custom_args, ytdlp_args)
     except KeyboardInterrupt:
-        print("\n\nProcess aborted by user.")
+        print(f"\n\n{Fore.YELLOW}Process aborted by user.{Style.RESET_ALL}")
         sys.exit(1)
 
 if __name__ == "__main__":
