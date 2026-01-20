@@ -45,22 +45,23 @@ def parse_passthrough_args(args_list):
     parser = yt_dlp.options.create_parser() # type: ignore
     try:
         parsed, _ = parser.parse_known_args(filtered_args)
+    except Exception as e:
+        print(e,end='')
+        sys.exit(1)
 
-        opts = vars(parsed) # convert to dict
+    opts = vars(parsed) # convert to dict
 
-        # Filter out defaults to return ONLY user-provided args
-        # create a baseline parser to see what the defaults are
-        base_parser = yt_dlp.options.create_parser() # type: ignore
-        base_parsed, _ = base_parser.parse_args([])
-        base_opts = vars(base_parsed)
+    # Filter out defaults to return ONLY user-provided args
+    # create a baseline parser to see what the defaults are
+    base_parser = yt_dlp.options.create_parser() # type: ignore
+    base_parsed, _ = base_parser.parse_args([])
+    base_opts = vars(base_parsed)
 
-        # Build dictionary of only changed items
-        final_opts = {}
-        for key, value in opts.items():
-            # Only keep the option if the user changed it from the default
-            if base_opts[key] != value:
-                final_opts[key] = value
-    except Exception:
-        pass
+    # Build dictionary of only changed items
+    final_opts = {}
+    for key, value in opts.items():
+        # Only keep the option if the user changed it from the default
+        if base_opts[key] != value:
+            final_opts[key] = value
 
     return final_opts
