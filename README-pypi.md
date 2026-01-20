@@ -1,6 +1,6 @@
 # ytfetch
 
-**ytfetch** simplifies media downloading and playlist management by adding "Smart Fetching,"playlist searching, and streamlined format handling on top of the powerful `yt-dlp` engine.
+**ytfetch** simplifies media downloading and playlist management by adding "Smart Fetching,"playlist searching, and streamlined format handling on top of the powerful [yt-dlp](https://github.com/yt-dlp/yt-dlp) engine.
 
 ## ✨ Features
 
