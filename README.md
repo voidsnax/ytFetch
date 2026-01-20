@@ -64,8 +64,8 @@ pip install ytfetch
 
 ### via source
 ```bash
-git clone <your-repo-url>
-cd <your-repo>
+git clone https://github.com/voidsnax/ytFetch.git
+cd ytFetch
 pip install -e .
 ```
 
@@ -84,12 +84,11 @@ options:
   -mp3                       Extract audio only as MP3
   -audio                     Extract audio only
   -fetch RANGE [RANGE ...]   Alternate for --playlist-items. Single value applies globally
-                             Multiple value must number of playlist URLs provided
-                             match number of playlist URLs provided.
+                             Multiple value must match number of playlist URLs provided.
   -list [NAME]               List playlist contents. Accepts values for searching across playlist
 ```
 
-*Note: Arguments are position-independent except for `-list` and `-flag` where URLs can be mentioned after it*
+*Note: Arguments are position-independent except for `-list` and `-fetch` where URLs can't be mentioned after it*.
 
 ### Examples
 
