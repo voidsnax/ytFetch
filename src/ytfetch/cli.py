@@ -53,10 +53,10 @@ def progress_hook(d):
 # --- Argument Parsing ---
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        usage = "Usage: ytfetch [yt-dlp OPTIONS] URL ... [OPTIONS]",
-        description="ytfetch: yt-dlp wrapper with flexible args and custom output.",
+        usage = "ytfetch [yt-dlp OPTIONS] URL ... [OPTIONS]",
+        description="ytfetch: yt-dlp wrapper with flexible args.",
         epilog = "type ytftech -help for yt-dlp options \n"
-        "Avoid mixing up options",
+        "Doc & issues: https://github.com/voidsnax/ytFetch",
         formatter_class=AlignedHelpFormatter,
         add_help=False,
         allow_abbrev=False
@@ -75,8 +75,8 @@ def parse_arguments():
     parser.add_argument("-audio", action="store_true",
                         help="Extract audio only (bestaudio)")
     parser.add_argument("-fetch", metavar="RANGE",nargs="+",
-                        help="Alternate for --playlist-items. Single arg applies globally.\n"
-                        "Multiple args must match number of playlist URLs provided.")
+                        help="Alternate for --playlist-items. Single value applies globally\n"
+                        "Multiple values must match number of playlist URLs provided")
     parser.add_argument("-list", metavar="NAME",nargs="?",const="default",
                         help="List playlist contents. Accepts values for searching across playlist")
 
@@ -100,9 +100,15 @@ def get_format_selector(args):
 def process_urls(custom_args, raw_ytdlp_args):
     urls = get_urls_from_args(raw_ytdlp_args)
     if custom_args.help:
-         yt_dlp.options.create_parser().print_help() # type: ignore
-         sys.exit()
-    if not urls and not custom_args.list :
+        yt_dlp.options.create_parser().print_help() # type: ignore
+        sys.exit()
+    if custom_args.list and custom_args.list.startswith('http'):
+        print_error(f"Provided URL link as argument for -list\nUse -list after URL")
+        sys.exit(1)
+    if custom_args.fetch and any(item.startswith("http") for item in custom_args.fetch):
+        print_error(f"Provided a URL link after -fetch\nUse -fetch after URL")
+        sys.exit(1)
+    if not urls:
         print_error(f"Error: No URLs provided.")
         sys.exit(1)
 
@@ -118,9 +124,6 @@ def process_urls(custom_args, raw_ytdlp_args):
 
     # --- Mode: List ---
     if custom_args.list:
-        if custom_args.list.startswith('http'):
-            print_error(f"Provided URL link as argument for -list\nUse -list after URL")
-            sys.exit(1)
         base_cmd = [
             "yt-dlp",
             "--flat-playlist",
@@ -138,9 +141,6 @@ def process_urls(custom_args, raw_ytdlp_args):
 
         fetch_ranges = custom_args.fetch
         if fetch_ranges:
-            if any(phrase in fetch_ranges for phrase in urls):
-                print_error(f"Provided URL link as argument for -fetch\nUse -fetch after URL")
-                sys.exit(1)
             if len(fetch_ranges) >1:
                 validate_fetch_ranges(fetch_ranges,urls)
                 for fetch_range in fetch_ranges:
@@ -158,7 +158,7 @@ def process_urls(custom_args, raw_ytdlp_args):
 
         if custom_args.list != 'default':
             search_mode = True
-            list_val = str(custom_args.list)
+            list_val = custom_args.list
             search_pattern = list_val.lower()
         for url, cmd in zip(urls, command):
             # currently for title fetching this is more reliable
