@@ -17,7 +17,7 @@ dependencies = [
     "colorama"
 ]
 
-keywords = ["youtubedownloader"", "converter", "h264", "mp3"]
+keywords = ["youtubedownloader", "converter", "h264", "mp3", "playlist"]
 
 [project.urls]
 Homepage = "https://github.com/voidsnax/reVidx"
