@@ -53,9 +53,9 @@ def progress_hook(d):
 # --- Argument Parsing ---
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        usage = "Usage: ytfetch [OPTIONS] URL ... [yt-dlp OPTIONS]",
+        usage = "Usage: ytfetch [yt-dlp OPTIONS] URL ... [OPTIONS]",
         description="ytfetch: yt-dlp wrapper with flexible args and custom output.",
-        epilog = "type yt-dlp -h for yt-dlp options \n"
+        epilog = "type ytftech -help for yt-dlp options \n"
         "Avoid mixing up options",
         formatter_class=AlignedHelpFormatter,
         add_help=False,
@@ -63,6 +63,8 @@ def parse_arguments():
     )
     parser.add_argument('-h',action='help',
                         help='Show this help message and exit.')
+    parser.add_argument('-help',action="store_const",const="default",
+                        help='Show yt-dlp help message.')
 
     parser.add_argument("-avcmp3", action="store_true",
                         help="Download video in AVC (h.264) format (mp4) + extract audio")
@@ -97,7 +99,10 @@ def get_format_selector(args):
 
 def process_urls(custom_args, raw_ytdlp_args):
     urls = get_urls_from_args(raw_ytdlp_args)
-    if not urls and not custom_args.list:
+    if custom_args.help:
+         yt_dlp.options.create_parser().print_help() # type: ignore
+         sys.exit()
+    if not urls and not custom_args.list :
         print_error(f"Error: No URLs provided.")
         sys.exit(1)
 
@@ -189,7 +194,6 @@ def process_urls(custom_args, raw_ytdlp_args):
 
         # stops further execution
         return
-
 
     ydl_opts['format'] = get_format_selector(custom_args)
 
