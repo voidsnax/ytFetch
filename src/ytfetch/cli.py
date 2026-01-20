@@ -57,8 +57,13 @@ def parse_arguments():
         description="ytfetch: yt-dlp wrapper with flexible args and custom output.",
         epilog = "type yt-dlp -h for yt-dlp options \n"
         "Avoid mixing up options",
-        formatter_class=AlignedHelpFormatter
+        formatter_class=AlignedHelpFormatter,
+        add_help=False,
+        allow_abbrev=False
     )
+    parser.add_argument('-h',action='help',
+                        help='Show this help message and exit.')
+
     parser.add_argument("-avcmp3", action="store_true",
                         help="Download video in AVC (h.264) format (mp4) + extract audio")
     parser.add_argument("-q", metavar="QUALITY",default="1080",
@@ -86,28 +91,9 @@ def get_format_selector(args):
         return "bestaudio"
 
     if args.avcmp3:
-        return f"bestvideo[vcodec^=avc1][height<={height}]+bestaudio/best[height<={height}]"
+        return f"bestvideo[vcodec^=avc1][height<={height}]+bestaudio/best[vcodec^=avc1][height<={height}]"
     return f"bestvideo[height<={height}]+bestaudio/best[height<={height}]"
 
-def get_post_processors(args):
-    post_processors = []
-    if args.mp3:
-        post_processors.append({
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        })
-    elif args.avcmp3:
-        post_processors.append({
-            'key': 'FFmpegVideoConvertor',
-            'preferredformat': 'mp4',
-            'postprocessor_args': [
-                '-c:v', 'copy',
-                '-c:a', 'libmp3lame',
-                '-b:a', '192k'
-            ]
-        })
-    return post_processors
 
 def process_urls(custom_args, raw_ytdlp_args):
     urls = get_urls_from_args(raw_ytdlp_args)
@@ -124,13 +110,6 @@ def process_urls(custom_args, raw_ytdlp_args):
     }
 
     ydl_opts.update(passthrough_opts)
-
-    if custom_args.avcmp3 and not (custom_args.mp3 or custom_args.audio):
-        ydl_opts['merge_output_format'] = 'mp4'
-
-    if not custom_args.list:
-        ydl_opts['format'] = get_format_selector(custom_args)
-        ydl_opts['postprocessors'] = get_post_processors(custom_args)
 
     # --- Mode: List ---
     if custom_args.list:
@@ -210,6 +189,22 @@ def process_urls(custom_args, raw_ytdlp_args):
 
         # stops further execution
         return
+
+
+    ydl_opts['format'] = get_format_selector(custom_args)
+
+    if custom_args.mp3:
+        ydl_opts['postprocessors'] = [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }]
+
+    if custom_args.avcmp3 and not custom_args.mp3:
+        ydl_opts['merge_output_format'] = 'mp4'
+        ydl_opts['postprocessor_args'] = {
+            'ffmpeg': ['-c:v', 'copy', '-c:a', 'libmp3lame', '-b:a', '192k']
+        }
 
     # --- Mode: Download ---
     def run_download(url, playlist_items=None):

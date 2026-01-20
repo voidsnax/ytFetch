@@ -1,5 +1,6 @@
 import sys
 import argparse
+import yt_dlp
 from colorama import Fore, init # type: ignore
 
 init(autoreset=True)
@@ -25,86 +26,30 @@ def print_error(msg):
 
 def parse_passthrough_args(args_list):
     """
-    Parses unknown arguments (yt-dlp args) into a dictionary.
+    Parses unknown arguments using yt-dlp's internal parser.
+    Returns a dictionary containing ONLY the options explicitly passed by the user.
     """
-    opts = {}
-    i = 0
-    while i < len(args_list):
-        arg = args_list[i]
+    filtered_args = [a for a in args_list if not a.startswith("http")]
+    if not filtered_args:
+        return {}
 
-        # --- Long flags ---
-        if arg.startswith("--"):
-            if "=" in arg:  # --key=value
-                key, val = arg[2:].split("=", 1)
-                opts[key.replace('-', '_')] = val
-                i += 1
-                continue
+    parser = yt_dlp.options.create_parser() # type: ignore
 
-            key = arg[2:].replace('-', '_')
+    parsed, _ = parser.parse_known_args(filtered_args)
 
-            if key.startswith("no_"):  # --no-flag
-                opts[key[3:]] = False
-                i += 1
-                continue
+    opts = vars(parsed) # convert to dict
 
-            if i + 1 < len(args_list) and not args_list[i+1].startswith("-"):
-                if not args_list[i+1].startswith("http"):  # skip URLs
-                    opts[key] = args_list[i+1]
-                    i += 2
-                    continue
+    # Filter out defaults to return ONLY user-provided args
+    # create a baseline parser to see what the defaults are
+    base_parser = yt_dlp.options.create_parser() # type: ignore
+    base_parsed, _ = base_parser.parse_args([])
+    base_opts = vars(base_parsed)
 
-            opts[key] = True
-            i += 1
-            continue
+    # Build dictionary of only changed items
+    final_opts = {}
+    for key, value in opts.items():
+        # Only keep the option if the user changed it from the default
+        if base_opts[key] != value:
+            final_opts[key] = value
 
-        # --- Short flags ---
-        elif arg.startswith("-") and len(arg) > 1:
-            # Handle grouped flags like -abc -> a=True, b=True, c=True
-            if len(arg) > 2 and not "=" in arg:
-                for ch in arg[1:]:
-                    opts[ch] = True
-                i += 1
-                continue
-
-            # Handle -k=value
-            if "=" in arg:
-                key, val = arg[1:].split("=", 1)
-                opts[normalize_key(key)] = val
-                i += 1
-                continue
-
-            key = arg[1:]
-
-            # Handle -k value
-            if i + 1 < len(args_list) and not args_list[i+1].startswith("-"):
-                if not args_list[i+1].startswith("http"):
-                    opts[normalize_key(key)] = args_list[i+1]
-                    i += 2
-                    continue
-
-            # Otherwise boolean short flag
-            opts[normalize_key(key)] = True
-            i += 1
-            continue
-
-        else:
-            # Not a flag, skip
-            i += 1
-
-    return opts
-
-SHORT_FLAG_MAP = {
-    "o": "outtmpl",
-    "I": "playlist_items",
-    "f": "format",              # format selector
-    "s": "simulate",            # simulate (no download)
-    "g": "geturl",              # print direct URL
-    "j": "dumpjson",            # dump JSON info
-    "J": "dump_single_json",    # dump JSON for playlist
-    "F": "listformats",         # list available formats
-    'r': 'limitrate',           # Maximum download rate in bytes per second
-    'a': 'auto_number'          # automatically number each downloaded video
-}
-
-def normalize_key(key):
-    return SHORT_FLAG_MAP.get(key, key)
+    return final_opts
