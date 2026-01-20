@@ -20,6 +20,15 @@ class AlignedHelpFormatter(argparse.HelpFormatter):
     def __init__(self, *args, **kwargs):
         kwargs['max_help_position'] = 35  # default is 24
         super().__init__(*args, **kwargs)
+    def _fill_text(self, text, width, indent):
+        # Preserve newlines in Description and Epilog
+        # splitlines(keepends=True) ensures not losing of double newlines
+        return ''.join(indent + line for line in text.splitlines(keepends=True))
+
+    def _split_lines(self, text, width):
+        # Preserve newlines in help
+        return text.splitlines()
+
 
 def print_error(msg):
     print(f"{Fore.RED}{msg}")
