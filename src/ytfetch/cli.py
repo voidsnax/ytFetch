@@ -35,7 +35,7 @@ class YTFetchLogger:
         print(f"{msg}")
 
     def error(self, msg):
-        print(f"{msg}")
+        print(f"\n{msg}")
 
 
 # --- Custom Progress Hook ---
