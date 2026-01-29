@@ -79,7 +79,7 @@ usage: Usage: ytfetch [yt-dlp OPTIONS] URL ... [OPTIONS]
 options:
   -h                         Show this help message and exit.
   -help                      Show yt-dlp help message.
-  -avcmp3                    Download video in AVC (h.264) format (mp4) + extract audio
+  -avcmp3                    Download video in AVC (h.264) & audio in mp3 format
   -q QUALITY                 Video quality (e.g., 1080, 720). Default is 1080.
   -mp3                       Extract audio only as MP3
   -audio                     Extract audio only
