@@ -1,6 +1,6 @@
 # ytfetch
 
-**ytfetch** simplifies media downloading and playlist management by adding "Smart Fetching,"playlist searching, and streamlined format handling on top of the powerful [yt-dlp](https://github.com/yt-dlp/yt-dlp) engine.
+**ytfetch** simplifies media downloading and playlist management by adding smart Fetching, playlist searching, and streamlined format handling on top of the powerful [yt-dlp](https://github.com/yt-dlp/yt-dlp) engine.
 
 ## ✨ Features
 
@@ -44,15 +44,15 @@ pip install -e .
 usage: Usage: ytfetch [yt-dlp OPTIONS] URL ... [OPTIONS]
 
 options:
-  -h                         Show this help message and exit.
-  -help                      Show yt-dlp help message.
+  -h                         Show this help message and exit
+  -help                      Show yt-dlp help messag
   -avcmp3                    Download video in AVC (h.264) & audio in mp3 format
-  -q QUALITY                 Video quality (e.g., 1080, 720). Default is 1080.
+  -q QUALITY                 Video quality (e.g., 1080, 720). Default is 1080
   -mp3                       Extract audio only as MP3
   -audio                     Extract audio only
   -fetch RANGE [RANGE ...]   Alternate for --playlist-items. Single value applies globally
                              Multiple value must number of playlist URLs provided
-                             match number of playlist URLs provided.
+                             match number of playlist URLs provided
   -list [NAME]               List playlist contents. Accepts values for searching across playlist
 ```
 

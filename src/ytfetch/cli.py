@@ -62,14 +62,14 @@ def parse_arguments():
         allow_abbrev=False
     )
     parser.add_argument('-h',action='help',
-                        help='Show this help message and exit.')
+                        help='Show this help message and exit')
     parser.add_argument('-help',action="store_const",const="default",
-                        help='Show yt-dlp help message.')
+                        help='Show yt-dlp help message')
 
     parser.add_argument("-avcmp3", action="store_true",
                         help="Download video in AVC (h.264) & audio in mp3 format")
     parser.add_argument("-q", metavar="QUALITY",default="1080",
-                        help="Video quality (e.g., 1080, 720). Default is 1080.")
+                        help="Video quality (e.g., 1080, 720). Default is 1080")
     parser.add_argument("-mp3", action="store_true",
                         help="Extract audio only as MP3")
     parser.add_argument("-audio", action="store_true",
