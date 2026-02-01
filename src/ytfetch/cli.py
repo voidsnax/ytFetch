@@ -16,20 +16,15 @@ from .utils import (
 # --- Argument Parsing ---
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        usage = "ytfetch [yt-dlp OPTIONS] URL ... [OPTIONS]",
+        usage = "ytfetch URL ... [OPTIONS] [yt-dlp OPTIONS] ",
         description="ytfetch: yt-dlp wrapper with flexible args.",
-        epilog = "type ytftech -help for yt-dlp options \n"
+        epilog = "type yt-dlp -h for yt-dlp options \n"
         "Doc & issues: https://github.com/voidsnax/ytFetch",
         formatter_class=AlignedHelpFormatter,
-        add_help=False,
         allow_abbrev=False
     )
-    parser.add_argument('-h',action='help',
-                        help='Show this help message and exit')
-    parser.add_argument('-help',action="store_const",const="default",
-                        help='Show yt-dlp help message')
 
-    parser.add_argument("url", nargs="+", help="URL")
+    parser.add_argument("url", nargs="+", metavar="URL")
     parser.add_argument("-avcmp3", action="store_true",
                         help="Download video in AVC (h.264) & audio in mp3 format")
     parser.add_argument("-q", metavar="QUALITY",default="1080",
@@ -59,11 +54,6 @@ def get_format_selector(args):
 
 def process_urls(custom_args, raw_ytdlp_args):
     urls = custom_args.url
-
-    if custom_args.help:
-        yt_dlp.options.create_parser().print_help() # type: ignore
-        sys.exit()
-
     passthrough_opts = parse_passthrough_args(raw_ytdlp_args)
 
     ydl_opts = {

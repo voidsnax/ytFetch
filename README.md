@@ -74,7 +74,7 @@ pip install -e .
 ### General Syntax and Options
 
 ```text
-usage: Usage: ytfetch [yt-dlp OPTIONS] URL ... [OPTIONS]
+usage: ytfetch URL ... [OPTIONS] [yt-dlp OPTIONS]
 
 options:
   -h                         Show this help message and exit
@@ -87,8 +87,6 @@ options:
                              Multiple value must match number of playlist URLs provided
   -list [NAME]               List playlist contents. Accepts values for searching across playlist
 ```
-
-*Note: If URLs are mentioned after `-list` or `-fetch` use `-` to not treat it as a value*
 
 ### Examples
 
