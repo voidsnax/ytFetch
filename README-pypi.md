@@ -56,7 +56,7 @@ options:
   -list [NAME]               List playlist contents. Accepts values for searching across playlist
 ```
 
-*Note: Arguments are position-independent except for `-list` and `-flag` where URLs can be mentioned after it*
+*Note: If URLs are mentioned after `-list` or `-fetch` use `-` to not treat it as a value*
 
 ### Examples
 

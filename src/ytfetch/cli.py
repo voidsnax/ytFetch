@@ -4,51 +4,14 @@ import yt_dlp # type: ignore
 from colorama import Fore, Style # type: ignore
 import subprocess
 from .utils import (
-    validate_fetch_ranges,
+    YTFetchLogger,
+    progress_hook,
     ErrorOnlyLogger,
+    parse_passthrough_args,
     AlignedHelpFormatter,
-    print_error,
-    parse_passthrough_args
+    validate_fetch_ranges,
+    print_error
     )
-
-# --- Custom Logger ---
-class YTFetchLogger:
-    def debug(self, msg):
-        message = [
-            "Downloading playlist:", "Downloading item", "Resuming",
-            "Destination:", "already been downloaded",  "Finished downloading"
-        ]
-        clean_msg = msg.replace("[download] ", "")
-
-        if any(phrase in msg for phrase in message):
-            print(clean_msg)
-
-        if "Merging formats" in msg:
-            print(msg.replace("[Merger] ", ""))
-
-    def info(self, msg):
-        pass
-
-    def warning(self, msg):
-        if "Some web client https formats have been skipped" in msg:
-            return
-        print(f"{msg}")
-
-    def error(self, msg):
-        print(f"\n{msg}")
-
-
-# --- Custom Progress Hook ---
-def progress_hook(d):
-    if d['status'] == 'downloading':
-        percent = d.get('_percent_str', '0.0%')
-        total = d.get('_total_bytes_str', d.get('_total_bytes_estimate_str', 'N/A'))
-        speed = d.get('_speed_str', 'N/A')
-        status = f"{percent} of {total} at {speed}"
-        print(f"\r{status}", end="")
-        sys.stdout.flush()
-    elif d['status'] == 'finished':
-        print()
 
 # --- Argument Parsing ---
 def parse_arguments():
@@ -66,6 +29,7 @@ def parse_arguments():
     parser.add_argument('-help',action="store_const",const="default",
                         help='Show yt-dlp help message')
 
+    parser.add_argument("url", nargs="+", help="URL")
     parser.add_argument("-avcmp3", action="store_true",
                         help="Download video in AVC (h.264) & audio in mp3 format")
     parser.add_argument("-q", metavar="QUALITY",default="1080",
@@ -83,9 +47,6 @@ def parse_arguments():
     args, unknown_args = parser.parse_known_args()
     return args, unknown_args
 
-def get_urls_from_args(args_list):
-    return [a for a in args_list if a.startswith("http")]
-
 def get_format_selector(args):
     height = args.q.rstrip("p")
 
@@ -96,21 +57,12 @@ def get_format_selector(args):
         return f"bestvideo[vcodec^=avc1][height<={height}]+bestaudio/best[vcodec^=avc1][height<={height}]"
     return f"bestvideo[height<={height}]+bestaudio/best[height<={height}]"
 
-
 def process_urls(custom_args, raw_ytdlp_args):
-    urls = get_urls_from_args(raw_ytdlp_args)
+    urls = custom_args.url
+
     if custom_args.help:
         yt_dlp.options.create_parser().print_help() # type: ignore
         sys.exit()
-    if custom_args.list and custom_args.list.startswith('http'):
-        print_error(f"Provided URL link as argument for -list\nUse -list after URL")
-        sys.exit(1)
-    if custom_args.fetch and any(item.startswith("http") for item in custom_args.fetch):
-        print_error(f"Provided a URL link after -fetch\nUse -fetch after URL")
-        sys.exit(1)
-    if not urls:
-        print_error(f"Error: No URLs provided.")
-        sys.exit(1)
 
     passthrough_opts = parse_passthrough_args(raw_ytdlp_args)
 
@@ -122,7 +74,7 @@ def process_urls(custom_args, raw_ytdlp_args):
 
     ydl_opts.update(passthrough_opts)
 
-    # --- Mode: List ---
+    # --- List ---
     if custom_args.list:
         base_cmd = [
             "yt-dlp",
@@ -192,7 +144,6 @@ def process_urls(custom_args, raw_ytdlp_args):
             except Exception as e:
                 print_error(f"Error listing {url}: {e}")
 
-        # stops further execution
         return
 
     ydl_opts['format'] = get_format_selector(custom_args)
@@ -204,13 +155,13 @@ def process_urls(custom_args, raw_ytdlp_args):
             'preferredquality': '192',
         }]
 
-    if custom_args.avcmp3 and not custom_args.mp3:
+    elif custom_args.avcmp3:
         ydl_opts['merge_output_format'] = 'mp4'
         ydl_opts['postprocessor_args'] = {
             'ffmpeg': ['-c:v', 'copy', '-c:a', 'libmp3lame', '-b:a', '192k']
         }
 
-    # --- Mode: Download ---
+    # --- Download ---
     def run_download(url, playlist_items=None):
         opts = ydl_opts.copy()
         if playlist_items:
@@ -240,7 +191,7 @@ def main():
         custom_args, ytdlp_args = parse_arguments()
         process_urls(custom_args, ytdlp_args)
     except KeyboardInterrupt:
-        print(f"\n\n{Fore.YELLOW}Process aborted by user.{Style.RESET_ALL}")
+        print(f"\n\n{Fore.YELLOW}Process aborted by user{Style.RESET_ALL}")
         sys.exit(1)
 
 if __name__ == "__main__":

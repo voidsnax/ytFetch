@@ -5,10 +5,43 @@ from colorama import Fore, init # type: ignore
 
 init(autoreset=True)
 
-def validate_fetch_ranges(fetch_ranges, urls):
-    if len(fetch_ranges) != len(urls):
-        print_error(f"Error: Provided {len(fetch_ranges)} fetch ranges for {len(urls)} URLs.")
-        sys.exit(1)
+class YTFetchLogger:
+    def debug(self, msg):
+        message = [
+            "Downloading playlist:", "Downloading item", "Resuming",
+            "Destination:", "already been downloaded",  "Finished downloading"
+        ]
+        clean_msg = msg.replace("[download] ", "")
+
+        if any(phrase in msg for phrase in message):
+            print(clean_msg)
+
+        if "Merging formats" in msg:
+            print(msg.replace("[Merger] ", ""))
+
+    def info(self, msg):
+        pass
+
+    def warning(self, msg):
+        if "Some web client https formats have been skipped" in msg:
+            return
+        print(f"{msg}")
+
+    def error(self, msg):
+        print(f"\n{msg}")
+
+
+# --- Custom Progress Hook ---
+def progress_hook(d):
+    if d['status'] == 'downloading':
+        percent = d.get('_percent_str', '0.0%')
+        total = d.get('_total_bytes_str', d.get('_total_bytes_estimate_str', 'N/A'))
+        speed = d.get('_speed_str', 'N/A')
+        status = f"{percent} of {total} at {speed}"
+        print(f"\r{status}", end="")
+        sys.stdout.flush()
+    elif d['status'] == 'finished':
+        print()
 
 class ErrorOnlyLogger:
     def debug(self, msg): pass
@@ -29,22 +62,14 @@ class AlignedHelpFormatter(argparse.HelpFormatter):
         # Preserve newlines in help
         return text.splitlines()
 
-
-def print_error(msg):
-    print(f"{Fore.RED}{msg}")
-
 def parse_passthrough_args(args_list):
     """
     Parses unknown arguments using yt-dlp's internal parser.
     Returns a dictionary containing ONLY the options explicitly passed by the user.
     """
-    filtered_args = [a for a in args_list if not a.startswith("http")]
-    if not filtered_args:
-        return {}
-
     parser = yt_dlp.options.create_parser() # type: ignore
     try:
-        parsed, _ = parser.parse_known_args(filtered_args)
+        parsed, _ = parser.parse_known_args(args_list)
     except Exception as e:
         print(e,end='')
         sys.exit(1)
@@ -65,3 +90,11 @@ def parse_passthrough_args(args_list):
             final_opts[key] = value
 
     return final_opts
+
+def validate_fetch_ranges(fetch_ranges, urls):
+    if len(fetch_ranges) != len(urls):
+        print_error(f"Error: Provided {len(fetch_ranges)} fetch ranges for {len(urls)} URLs.")
+        sys.exit(1)
+
+def print_error(msg):
+    print(f"{Fore.RED}{msg}")
